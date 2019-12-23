@@ -52,7 +52,7 @@ ROBOTSTXT_OBEY = True
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 # DOWNLOADER_MIDDLEWARES = {
-#    'itjuzi.middlewares.ItjuziDownloaderMiddleware': 543,
+# 'itjuzi.middlewares.ItjuziDownloaderMiddleware': 543,
 # }
 
 # Enable or disable extensions
@@ -65,7 +65,7 @@ ROBOTSTXT_OBEY = True
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
     # 'itjuzi.pipelines.ItjuziPipeline': 300,
-    'itjuzi.pipelines.ItjuziMongoPipeline': 400,
+    'itjuzi.pipelines.MongoPipeline': 400,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -95,3 +95,22 @@ FEED_EXPORT_ENCODING = 'utf-8'
 # mongodb
 MONGO_URI = '127.0.0.1'
 MONGO_DB = 'itjuzi'
+
+# 构造请求头
+HEADER = {
+    "Content-Type": "application/json",
+    "Host": "www.itjuzi.com",
+    "Referer": "https: // www.itjuzi.com / investevent",
+}
+
+# 授权 api
+AUTHORIZATIONS_URL = "https://www.itjuzi.com/api/authorizations"
+# 事件库 api
+INVESTEVENTS_URL = "https://www.itjuzi.com/api/investevents"
+# 获取事件的请求参数
+PAYLOAD = {
+    "pagetotal": 0, "total": 0, "per_page": 20, "page": 1, "type": 1, "scope": "", "sub_scope": "",
+    "round": [], "valuation": [], "valuations": "", "ipo_platform": "", "equity_ratio": [""],
+    "status": "", "prov": "", "city": [], "time": [], "selected": "", "location": "", "currency": [],
+    "keyword": ""
+}
