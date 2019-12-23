@@ -8,14 +8,15 @@ import copy
 
 import pymongo
 
+from itjuzi.items import ItjuziItem
+
 
 class ItjuziPipeline(object):
     def process_item(self, item, spider):
         return item
 
 
-# mongodb pipeline
-class ItjuziMongoPipeline():
+class MongoPipeline(object):
     def __init__(self, mongo_uri, mongo_db):
         self.mongo_uri = mongo_uri
         self.mongo_db = mongo_db
@@ -28,30 +29,24 @@ class ItjuziMongoPipeline():
         )
 
     def open_spider(self, spider):
+        """
+        在爬虫启动的时候执行 open_spider 方法
+        创建 mongodb 连接客户端
+        """
         self.client = pymongo.MongoClient(self.mongo_uri)
         self.db = self.client[self.mongo_db]
-
-    def close_spider(self, spider):
-        self.client.close()
+        pass
 
     def process_item(self, item, spider):
-        """
-        问题：数据存入数据库之后，出现大量重复数据
-        解决思路：
-        在process_item中执行数据插入之前，先对变量进行复制copy，再用复制copy的变量进行操作，通过互斥确保变量不被修改。因此，修正这个问题，我们只需要调整优化下process_item()方法。
-        解决代码：process_item()     - copy.deepcopy(item)   ->导入copy包
-        """
-        asynItem = copy.deepcopy(item)
-        infos = {'id': asynItem['id'],
-                 'com_id': asynItem['com_id'],
-                 'name': asynItem['name'],
-                 'com_scope': asynItem['com_scope'],
-                 'money': asynItem['money'],
-                 'money_num': asynItem['money_num'],
-                 'valuation': asynItem['valuation'],
-                 'city': asynItem['city'],
-                 'agg_time': asynItem['agg_time'],
-                 'invse_des': asynItem['invse_des'],
-                 }
-        self.db.ITjuzi.insert(infos)
+        name = item.__class__.__name__
+        if isinstance(item, ItjuziItem):
+            if not self.db[name].find_one({'name': item['name'], 'com_id': item['com_id']}):
+                self.db[name].insert(dict(item))
         return item
+
+    def close_spider(self, spider):
+        """
+        爬虫结束的时候执行 close_spider 方法
+        关闭 mongodb 连接客户端
+        """
+        self.client.close()
