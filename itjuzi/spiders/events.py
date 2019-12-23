@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
+import copy
 import json
 import time
 
 import scrapy
+from fake_useragent import UserAgent
 
 from itjuzi.items import ItjuziItem
+from itjuzi.settings import HEADER, AUTHORIZATIONS_URL, INVESTEVENTS_URL, PAYLOAD
 from secure import ACCOUNT, PASSWORD
 
 
@@ -17,39 +20,24 @@ class EventsSpider(scrapy.Spider):
         """
         模拟POST请求登录IT桔子网
         """
-        header = {
-            "Content-Type": "application/json",
-            "User-Agent": "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; 360SE)",
-            "Host": "www.itjuzi.com",
-            "Referer": "https: // www.itjuzi.com / investevent",
-        }
-        url = "https://www.itjuzi.com/api/authorizations"
+        HEADER.update({"User-Agent": UserAgent().random})
         payload = {"account": ACCOUNT, "password": PASSWORD, "type": "pswd"}
-        yield scrapy.Request(url=url, method="POST", body=json.dumps(payload), headers=header, callback=self.parse)
+        yield scrapy.Request(url=AUTHORIZATIONS_URL, method="POST", body=json.dumps(payload), headers=HEADER,
+                             callback=self.parse)
 
     def parse(self, response):
-        url = "https://www.itjuzi.com/api/investevents"
+        self.logger.debug('parse UserAgent:' + str(response.request.headers['User-Agent']))  # 输出 UA，检查是否随机
         token = json.loads(response.text)['data']['token']
-        header = {
-            "Content-Type": "application/json",
-            "Authorization": token,
-            "User-Agent": "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; 360SE)",
-            "Host": "www.itjuzi.com",
-            "Referer": "https: // www.itjuzi.com / investevent",
-        }
-        payload = {
-            "pagetotal": 0, "total": 0, "per_page": 20, "page": 1, "type": 1, "scope": "", "sub_scope": "",
-            "round": [], "valuation": [], "valuations": "", "ipo_platform": "", "equity_ratio": [""],
-            "status": "", "prov": "", "city": [], "time": [], "selected": "", "location": "", "currency": [],
-            "keyword": ""
-        }
-        yield scrapy.Request(url=url, method="POST", body=json.dumps(payload), meta={'token': token}, headers=header,
-                             callback=self.parse_info)
+        HEADER.update({"Authorization": token,
+                       "User-Agent": UserAgent().random, })
+        yield scrapy.Request(url=INVESTEVENTS_URL, method="POST", body=json.dumps(PAYLOAD), meta={'token': token},
+                             headers=HEADER, callback=self.parse_info)
 
     def parse_info(self, response):
         """
         通过计算页数，获取总的页面数，抓取所有数据。
         """
+        self.logger.debug('parse_info UserAgent:' + str(response.request.headers['User-Agent']))  # 输出 UA，检查是否随机
         token = response.meta["token"]  # 获取传入过来的token
         data = json.loads(response.text)
         total_number = data['data']['page']['total']  # 总数据
@@ -57,28 +45,19 @@ class EventsSpider(scrapy.Spider):
             page = int(int(total_number) / 20) + 1
         else:
             page = int(total_number) / 20
-        url = "https://www.itjuzi.com/api/investevents"
-        header = {
-            "Content-Type": "application/json",
-            "Authorization": token,
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36",
-            "Host": "www.itjuzi.com",
-            "Referer": "https: // www.itjuzi.com / investevent",
-        }
+        HEADER.update({"Authorization": token,
+                       "User-Agent": UserAgent().random, })
         for i in range(1, page):
             time.sleep(1)
-            payload = {
-                "pagetotal": 0, "total": 0, "per_page": 20, "page": i, "type": 1, "scope": "", "sub_scope": "",
-                "round": [], "valuation": [], "valuations": "", "ipo_platform": "", "equity_ratio": [""],
-                "status": "", "prov": "", "city": [], "time": [], "selected": "", "location": "", "currency": [],
-                "keyword": ""
-            }
+            payload = copy.deepcopy(PAYLOAD)
+            payload['page'] = i
+            yield scrapy.Request(dont_filter=True, url=INVESTEVENTS_URL, method="POST", body=json.dumps(payload),
+                                 headers=HEADER, callback=self.parse_detail)
             # request()中加入dont_filter=True 解决scrapy自身是默认有过滤重复请求的bug。
             # 由于parse_info()函数中 请求的url和parse_detail()函数中请求的URL相同，需要加入dont_filter=True
-            yield scrapy.Request(dont_filter=True, url=url, method="POST", body=json.dumps(payload), headers=header,
-                                 callback=self.parse_detail)
 
     def parse_detail(self, response):
+        self.logger.debug('parse_detail UserAgent:' + str(response.request.headers['User-Agent']))  # 输出 UA，检查是否随机
         infos = json.loads(response.text)["data"]["data"]
         for info in infos:
             item = ItjuziItem()
