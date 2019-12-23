@@ -2,8 +2,9 @@
 
 爬 IT 橘子网的事件库
 
-- 框架：Scrapy
-- 储存：MongoDB 数据库
+- 框架：`Scrapy`
+- 储存：`MongoDB` 数据库
+- 反爬措施：每次请求使用随机 `User-Agent`
 
 需要使用到 IT 橘子网的账户密码用于模拟登陆获取 `token`，存放在 secure.py 文件内
 
